@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Freio em Foco — Distância de Frenagem</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap');
+
+  :root {
+    --bg: #0a0c10;
+    --surface: #12151c;
+    --card: #1a1e28;
+    --border: #252a38;
+    --car-color: #3b82f6;
+    --moto-color: #f59e0b;
+    --danger: #ef4444;
+    --safe: #22c55e;
+    --warn: #f97316;
+    --text: #e8eaf2;
+    --muted: #6b7280;
+    --accent: #818cf8;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* HEADER */
+  header {
+    text-align: center;
+    padding: 48px 24px 32px;
+    position: relative;
+    background: linear-gradient(180deg, #0d0f1a 0%, transparent 100%);
+    border-bottom: 1px solid var(--border);
+  }
+  header::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse 80% 60% at 50% -10%, rgba(99,102,241,0.15) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .badge {
+    display: inline-block;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    color: var(--accent);
+    border: 1px solid rgba(129,140,248,0.35);
+    padding: 4px 14px;
+    border-radius: 100px;
+    margin-bottom: 18px;
+    text-transform: uppercase;
+  }
+  h1 {
+    font-family: 'Black Han Sans', sans-serif;
+    font-size: clamp(2.4rem, 7vw, 4.2rem);
+    letter-spacing: -0.01em;
+    line-height: 1;
+    background: linear-gradient(135deg, #fff 30%, #818cf8 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 12px;
+  }
+  .subtitle {
+    color: var(--muted);
+    font-size: 1rem;
+    font-weight: 400;
+    max-width: 520px;
+    margin: 0 auto;
+    line-height: 1.6;
+  }
+
+  /* MAIN LAYOUT */
+  main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 32px 16px 80px;
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+  }
+
+  /* PANELS */
+  .panel {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 28px;
+    position: relative;
+    overflow: hidden;
+  }
+  .panel::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    border-radius: 18px 18px 0 0;
+  }
+  .panel.car::before { background: linear-gradient(90deg, var(--car-color), transparent); }
+  .panel.moto::before { background: linear-gradient(90deg, var(--moto-color), transparent); }
+
+  .panel-title {
+    font-family: 'Black Han Sans', sans-serif;
+    font-size: 1.05rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 22px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .panel-title .icon { font-size: 1.3rem; }
+  .car .panel-title { color: var(--car-color); }
+  .moto .panel-title { color: var(--moto-color); }
+
+  /* SLIDERS */
+  .slider-row {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+  }
+  .slider-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.78rem;
+    color: var(--muted);
+    min-width: 80px;
+  }
+  input[type=range] {
+    -webkit-appearance: none;
+    flex: 1;
+    min-width: 160px;
+    height: 6px;
+    border-radius: 10px;
+    background: var(--border);
+    outline: none;
+    cursor: pointer;
+  }
+  .car input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: var(--car-color);
+    box-shadow: 0 0 12px rgba(59,130,246,0.6);
+    cursor: pointer;
+    transition: transform 0.15s;
+  }
+  .car input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+  .car input[type=range]::-webkit-slider-runnable-track { background: var(--border); border-radius: 10px; }
+  .moto input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: var(--moto-color);
+    box-shadow: 0 0 12px rgba(245,158,11,0.6);
+    cursor: pointer;
+    transition: transform 0.15s;
+  }
+  .moto input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+
+  .speed-display {
+    font-family: 'Black Han Sans', sans-serif;
+    font-size: 2rem;
+    min-width: 90px;
+    text-align: right;
+  }
+  .speed-unit {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--muted);
+    display: block;
+    text-align: right;
+  }
+
+  /* ZONAS DE VELOCIDADE */
+  .speed-zones {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+  }
+  .zone-btn {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    padding: 5px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .zone-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .zone-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .car .zone-btn.active { background: var(--car-color); border-color: var(--car-color); }
+  .moto .zone-btn.active { background: var(--moto-color); border-color: var(--moto-color); }
+
+  /* MÉTRICAS */
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 12px;
+    margin-top: 12px;
+  }
+  .metric-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    text-align: center;
+  }
+  .metric-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .metric-value {
+    font-family: 'Black Han Sans', sans-serif;
+    font-size: 1.6rem;
+  }
+  .metric-unit {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+  }
+
+  /* ESTRADA ANIMADA */
+  .road-container {
+    background: #0f1115;
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 28px 24px;
+    overflow: hidden;
+    position: relative;
+  }
+  .road-title {
+    font-family: 'Black Han Sans', sans-serif;
+    font-size: 1rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 20px;
+    text-align: center;
+  }
+
+  .road-scene {
+    position: relative;
+    height: 80px;
+    background: #1c1f28;
+    border-radius: 10px;
+    overflow: visible;
+    margin-bottom: 16px;
+  }
+  /* Linhas da pista */
+  .road-lines {
+    position: absolute;
+    top: 50%; left: 0; right: 0;
+    height: 4px;
+    transform: translateY(-50%);
+    display: flex;
+    gap: 0;
+    overflow: hidden;
+  }
+  .road-line-seg {
+    background: #f5a623;
+    height: 4px;
+    flex: 0 0 40px;
+    margin-right: 30px;
+    border-radius: 2px;
+    animation: roadMove 0.8s linear infinite;
+  }
+  @keyframes roadMove {
+    from { transform: translateX(0); }
+    to { transform: translateX(-70px); }
+  }
+
+  /* VEÍCULO */
+  .vehicle-wrapper {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    pointer-events: none;
+  }
+
+  /* ZONA DE PERIGO */
+  .danger-zone {
+    position: absolute;
+    top: 0; bottom: 0;
+    opacity: 0.22;
+    border-radius: 4px;
+    transition: width 0.5s cubic-bezier(0.34,1.56,0.64,1), left 0.5s;
+  }
+  .danger-zone.reaction { background: #f97316; }
+  .danger-zone.braking  { background: #ef4444; }
+
+  /* ÍCONES SVG simples */
+  .car-icon { font-size: 2.4rem; filter: drop-shadow(0 0 8px rgba(59,130,246,0.8)); }
+  .moto-icon { font-size: 2rem; filter: drop-shadow(0 0 8px rgba(245,158,11,0.8)); }
+
+  /* LEGENDA DISTÂNCIAS */
+  .legend-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--muted);
+    margin-top: 8px;
+    justify-content: center;
+  }
+  .legend-dot {
+    width: 12px; height: 12px;
+    border-radius: 3px;
+    display: inline-block;
+  }
+
+  /* BARRA DE DISTÂNCIA COMPARATIVA */
+  .dist-bar-container {
+    margin-top: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .dist-bar-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .dist-bar-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--muted);
+    min-width: 38px;
+    text-align: right;
+  }
+  .dist-bar-track {
+    flex: 1;
+    background: var(--border);
+    border-radius: 6px;
+    height: 18px;
+    position: relative;
+    overflow: hidden;
+  }
+  .dist-bar-fill-reaction {
+    position: absolute; left: 0; top: 0; bottom: 0;
+    background: #f97316;
+    border-radius: 6px 0 0 6px;
+    transition: width 0.5s;
+    display: flex; align-items: center; justify-content: flex-end; padding-right: 4px;
+    font-size: 0.6rem; font-family: 'Space Mono', monospace; color: #fff; white-space: nowrap;
+  }
+  .dist-bar-fill-brake {
+    position: absolute; top: 0; bottom: 0;
+    background: #ef4444;
+    transition: width 0.5s, left 0.5s;
+    display: flex; align-items: center; justify-content: flex-end; padding-right: 4px;
+    font-size: 0.6rem; font-family: 'Space Mono', monospace; color: #fff; white-space: nowrap;
+  }
+  .dist-bar-value {
+    font-family: 'Black Han Sans', sans-serif;
+    font-size: 0.9rem;
+    min-width: 64px;
+  }
+
+  /* EQUAÇÕES */
+  .eq-panel {
+    background: #0f1115;
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 28px;
+  }
+  .eq-title {
+    font-family: 'Black Han Sans', sans-serif;
+    font-size: 1rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 20px;
+    text-align: center;
+  }
+  .eq-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px;
+  }
+  .eq-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px;
+  }
+  .eq-name {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.68rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 8px;
+  }
+  .eq-formula {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.95rem;
+    color: var(--accent);
+    background: rgba(129,140,248,0.08);
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-bottom: 10px;
+    border-left: 3px solid var(--accent);
+    word-break: break-word;
+  }
+  .eq-desc {
+    font-size: 0.82rem;
+    color: var(--muted);
+    line-height: 1.55;
+  }
+  .eq-desc strong { color: var(--text); }
+
+  /* TABELA REFERÊNCIA */
+  .ref-table-wrap {
+    overflow-x: auto;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--card);
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+  }
+  thead th {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    background: var(--surface);
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+    white-space: nowrap;
+  }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background 0.15s; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: rgba(255,255,255,0.03); }
+  tbody td { padding: 11px 16px; }
+  .td-speed { font-family: 'Black Han Sans', sans-serif; font-size: 1rem; }
+  .td-car { color: var(--car-color); font-family: 'Space Mono', monospace; }
+  .td-moto { color: var(--moto-color); font-family: 'Space Mono', monospace; }
+  .td-zone { font-size: 0.75rem; color: var(--muted); }
+  .risk-badge {
+    display: inline-block;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.62rem;
+    padding: 3px 9px;
+    border-radius: 100px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+  }
+  .risk-low    { background: rgba(34,197,94,0.15); color: var(--safe); border: 1px solid rgba(34,197,94,0.3); }
+  .risk-medium { background: rgba(249,115,22,0.15); color: var(--warn); border: 1px solid rgba(249,115,22,0.3); }
+  .risk-high   { background: rgba(239,68,68,0.15);  color: var(--danger); border: 1px solid rgba(239,68,68,0.3); }
+
+  /* ALERTA DINÂMICO */
+  .alert-box {
+    border-radius: 12px;
+    padding: 16px 20px;
+    font-size: 0.88rem;
+    line-height: 1.6;
+    border-left: 4px solid;
+    font-weight: 500;
+    transition: all 0.4s;
+    margin-top: 16px;
+  }
+  .alert-safe   { background: rgba(34,197,94,0.08);   border-color: var(--safe);   color: #86efac; }
+  .alert-warn   { background: rgba(249,115,22,0.08);  border-color: var(--warn);   color: #fdba74; }
+  .alert-danger { background: rgba(239,68,68,0.08);   border-color: var(--danger); color: #fca5a5; }
+
+  /* FOOTER */
+  footer {
+    text-align: center;
+    padding: 24px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--muted);
+    border-top: 1px solid var(--border);
+  }
+
+  /* GRID DOIS VEÍCULOS */
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  @media(max-width: 700px) {
+    .two-col { grid-template-columns: 1fr; }
+    .speed-display { font-size: 1.5rem; }
+  }
+
+  /* ANIMAÇÃO PULSE ALERTA */
+  @keyframes pulse-border {
+    0%,100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.4); }
+    50% { box-shadow: 0 0 0 6px rgba(239,68,68,0); }
+  }
+  .alert-danger { animation: pulse-border 2s infinite; }
+
+  /* SEPARADOR */
+  .section-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .section-label::before, .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* TOOLTIP */
+  .tooltip-wrap { position: relative; display: inline-block; }
+  .tooltip-wrap .tt {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1e2230;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 0.72rem;
+    font-family: 'DM Sans', sans-serif;
+    color: var(--text);
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s;
+    z-index: 10;
+  }
+  .tooltip-wrap:hover .tt { opacity: 1; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="badge">🚦 Educação no Trânsito</div>
+  <h1>FREIO EM FOCO</h1>
+  <p class="subtitle">Entenda a distância real para parar um veículo — e por que sua velocidade pode fazer a diferença entre um susto e uma tragédia.</p>
+</header>
+
+<main>
+
+  <!-- CONTROLES DOS VEÍCULOS -->
+  <div class="two-col">
+
+    <!-- CARRO -->
+    <div class="panel car" id="panel-car">
+      <div class="panel-title"><span class="icon">🚗</span> Automóvel (4 rodas)</div>
+      <div class="speed-zones" id="zones-car">
+        <button class="zone-btn" onclick="setSpeed('car',30,this)">30 km/h</button>
+        <button class="zone-btn" onclick="setSpeed('car',50,this)">50 km/h</button>
+        <button class="zone-btn" onclick="setSpeed('car',80,this)">80 km/h</button>
+        <button class="zone-btn" onclick="setSpeed('car',110,this)">110 km/h</button>
+      </div>
+      <div class="slider-row">
+        <span class="slider-label">velocidade</span>
+        <input type="range" id="speed-car" min="10" max="160" value="50" step="5" oninput="update()">
+        <div>
+          <span class="speed-display" id="val-car" style="color:var(--car-color)">50</span>
+          <span class="speed-unit">km/h</span>
+        </div>
+      </div>
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="metric-label">⏱ Reação</div>
+          <div class="metric-value" id="react-car" style="color:#f97316">—</div>
+          <div class="metric-unit">metros</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">🛑 Frenagem</div>
+          <div class="metric-value" id="brake-car" style="color:#ef4444">—</div>
+          <div class="metric-unit">metros</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">📏 TOTAL</div>
+          <div class="metric-value" id="total-car" style="color:var(--car-color)">—</div>
+          <div class="metric-unit">metros</div>
+        </div>
+      </div>
+      <div class="alert-box" id="alert-car"></div>
+    </div>
+
+    <!-- MOTO -->
+    <div class="panel moto" id="panel-moto">
+      <div class="panel-title"><span class="icon">🏍</span> Motocicleta (2 rodas)</div>
+      <div class="speed-zones" id="zones-moto">
+        <button class="zone-btn" onclick="setSpeed('moto',30,this)">30 km/h</button>
+        <button class="zone-btn" onclick="setSpeed('moto',50,this)">50 km/h</button>
+        <button class="zone-btn" onclick="setSpeed('moto',80,this)">80 km/h</button>
+        <button class="zone-btn" onclick="setSpeed('moto',110,this)">110 km/h</button>
+      </div>
+      <div class="slider-row">
+        <span class="slider-label">velocidade</span>
+        <input type="range" id="speed-moto" min="10" max="160" value="50" step="5" oninput="update()">
+        <div>
+          <span class="speed-display" id="val-moto" style="color:var(--moto-color)">50</span>
+          <span class="speed-unit">km/h</span>
+        </div>
+      </div>
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="metric-label">⏱ Reação</div>
+          <div class="metric-value" id="react-moto" style="color:#f97316">—</div>
+          <div class="metric-unit">metros</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">🛑 Frenagem</div>
+          <div class="metric-value" id="brake-moto" style="color:#ef4444">—</div>
+          <div class="metric-unit">metros</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">📏 TOTAL</div>
+          <div class="metric-value" id="total-moto" style="color:var(--moto-color)">—</div>
+          <div class="metric-unit">metros</div>
+        </div>
+      </div>
+      <div class="alert-box" id="alert-moto"></div>
+    </div>
+
+  </div><!-- /two-col -->
+
+  <!-- VISUALIZAÇÃO DA ESTRADA -->
+  <div class="road-container">
+    <div class="road-title">📐 Visualização da Distância Total de Parada</div>
+
+    <!-- CARRO na estrada -->
+    <div style="margin-bottom:14px;">
+      <div style="font-family:'Space Mono',monospace;font-size:0.7rem;color:var(--car-color);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.08em;">🚗 Automóvel</div>
+      <div class="road-scene" id="scene-car">
+        <div class="road-lines" id="lines-car">
+          <div class="road-line-seg"></div><div class="road-line-seg"></div>
+          <div class="road-line-seg"></div><div class="road-line-seg"></div>
+          <div class="road-line-seg"></div><div class="road-line-seg"></div>
+          <div class="road-line-seg"></div><div class="road-line-seg"></div>
+          <div class="road-line-seg"></div><div class="road-line-seg"></div>
+        </div>
+        <div class="danger-zone reaction" id="dz-car-react"></div>
+        <div class="danger-zone braking" id="dz-car-brake"></div>
+        <div class="vehicle-wrapper" id="car-vehicle" style="left:8px;">
+          <span class="car-icon">🚗</span>
+        </div>
+        <div id="car-road-label" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);font-family:'Space Mono',monospace;font-size:0.65rem;color:var(--muted);"></div>
+      </div>
+    </div>
+
+    <!-- MOTO na estrada -->
+    <div>
+      <div style="font-family:'Space Mono',monospace;font-size:0.7rem;color:var(--moto-color);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.08em;">🏍 Motocicleta</div>
+      <div class="road-scene" id="scene-moto">
+        <div class="road-lines" id="lines-moto">
+          <div class="road-line-seg"></div><div class="road-line-seg"></div>
+          <div class="road-line-seg"></div><div class="road-line-seg"></div>
+          <div class="road-line-seg"></div><div class="road-line-seg"></div>
+          <div class="road-line-seg"></div><div class="road-line-seg"></div>
+          <div class="road-line-seg"></div><div class="road-line-seg"></div>
+        </div>
+        <div class="danger-zone reaction" id="dz-moto-react"></div>
+        <div class="danger-zone braking" id="dz-moto-brake"></div>
+        <div class="vehicle-wrapper" id="moto-vehicle" style="left:8px;">
+          <span class="moto-icon">🏍</span>
+        </div>
+        <div id="moto-road-label" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);font-family:'Space Mono',monospace;font-size:0.65rem;color:var(--muted);"></div>
+      </div>
+    </div>
+
+    <!-- BARRA COMPARATIVA -->
+    <div class="dist-bar-container" style="margin-top:24px;">
+      <div class="section-label">Comparativo de Distâncias</div>
+      <div class="dist-bar-row">
+        <span class="dist-bar-label" style="color:var(--car-color);">🚗</span>
+        <div class="dist-bar-track" id="bar-car">
+          <div class="dist-bar-fill-reaction" id="bar-car-react"></div>
+          <div class="dist-bar-fill-brake" id="bar-car-brake"></div>
+        </div>
+        <span class="dist-bar-value" id="bar-val-car" style="color:var(--car-color);">—</span>
+      </div>
+      <div class="dist-bar-row">
+        <span class="dist-bar-label" style="color:var(--moto-color);">🏍</span>
+        <div class="dist-bar-track" id="bar-moto">
+          <div class="dist-bar-fill-reaction" id="bar-moto-react"></div>
+          <div class="dist-bar-fill-brake" id="bar-moto-brake"></div>
+        </div>
+        <span class="dist-bar-value" id="bar-val-moto" style="color:var(--moto-color);">—</span>
+      </div>
+    </div>
+
+    <div class="legend-row" style="margin-top:18px;">
+      <span class="legend-dot" style="background:#f97316;"></span> Distância de reação (tempo de resposta humano)
+      &nbsp;&nbsp;
+      <span class="legend-dot" style="background:#ef4444;"></span> Distância de frenagem (desaceleração do veículo)
+    </div>
+  </div>
+
+  <!-- EQUAÇÕES -->
+  <div class="eq-panel">
+    <div class="eq-title">📐 As Equações por Trás da Física</div>
+    <div class="eq-grid">
+      <div class="eq-card">
+        <div class="eq-name">1 · Distância de Reação</div>
+        <div class="eq-formula">d_r = (v / 3.6) × t_r</div>
+        <div class="eq-desc">
+          Antes de pisar no freio, o cérebro precisa perceber o perigo. O tempo médio de reação humana é <strong>t_r = 1,0 s</strong> (condições ideais). Cansaço, álcool ou distração podem elevar isso para 2–3 s. <em>v</em> em km/h é convertido para m/s dividindo por 3,6.
+        </div>
+      </div>
+      <div class="eq-card">
+        <div class="eq-name">2 · Distância de Frenagem</div>
+        <div class="eq-formula">d_f = v² / (2 × μ × g × 3.6²)</div>
+        <div class="eq-desc">
+          Após acionar os freios, a física desacelera o veículo. <strong>μ</strong> é o coeficiente de atrito (asfalto seco ≈ 0,75 para carro, 0,65 para moto), <strong>g = 9,8 m/s²</strong>. Pista molhada pode reduzir μ à metade!
+        </div>
+      </div>
+      <div class="eq-card">
+        <div class="eq-name">3 · Distância Total de Parada</div>
+        <div class="eq-formula">D_total = d_r + d_f</div>
+        <div class="eq-desc">
+          A soma completa: o espaço percorrido enquanto você ainda não freou <strong>mais</strong> o espaço para o veículo parar de vez. Em <strong>100 km/h</strong>, um carro percorre quase <strong>3 campos de futebol</strong> até parar completamente.
+        </div>
+      </div>
+      <div class="eq-card">
+        <div class="eq-name">⚠️ O efeito do quadrado</div>
+        <div class="eq-formula">d_f ∝ v²</div>
+        <div class="eq-desc">
+          A distância de frenagem cresce com o <strong>quadrado da velocidade</strong>: dobrar a velocidade <em>quadruplica</em> a distância de parada. De 50 → 100 km/h, a distância de frenagem vai de ~20 m para ~80 m. Não é linear!
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TABELA REFERÊNCIA -->
+  <div>
+    <div class="section-label" style="margin-bottom:16px;">Tabela de Referência — Limites de Velocidade × Distância</div>
+    <div class="ref-table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Velocidade</th>
+            <th>Local típico (CTB)</th>
+            <th>🚗 Dist. total (carro)</th>
+            <th>🏍 Dist. total (moto)</th>
+            <th>Risco relativo</th>
+          </tr>
+        </thead>
+        <tbody id="ref-table-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- CURIOSIDADES -->
+  <div class="eq-panel">
+    <div class="eq-title">💡 Você Sabia?</div>
+    <div class="eq-grid">
+      <div class="eq-card">
+        <div class="eq-name">🌧 Pista Molhada</div>
+        <div class="eq-desc">Em chuva, o atrito pode cair para <strong>μ ≈ 0,35–0,45</strong>, aumentando a distância de frenagem em até <strong>80%</strong>. Reduza a velocidade ao menos 20% em dias chuvosos.</div>
+      </div>
+      <div class="eq-card">
+        <div class="eq-name">📱 Distração Digital</div>
+        <div class="eq-desc">Olhar o celular por apenas <strong>2 segundos</strong> a 60 km/h significa percorrer <strong>33 metros às cegas</strong> — o equivalente a fechar os olhos em quase 3 comprimentos de ônibus.</div>
+      </div>
+      <div class="eq-card">
+        <div class="eq-name">🍺 Álcool e Reação</div>
+        <div class="eq-desc">Com 0,3 g/L de álcool no sangue (abaixo do limite legal em muitos estados), o tempo de reação pode aumentar <strong>30–50%</strong>, adicionando metros críticos à distância total.</div>
+      </div>
+      <div class="eq-card">
+        <div class="eq-name">🏍 Motos: Atenção Dobrada</div>
+        <div class="eq-desc">Motos têm menor área de contato com o asfalto e <strong>sem estrutura protetora</strong>. Em colisões a 60 km/h, o risco de morte para motociclistas é <strong>27× maior</strong> que para ocupantes de carros (OMS, 2023).</div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  Freio em Foco · Dados baseados em física clássica, CONTRAN/CTB e referências da OMS · Valores educativos — condições reais variam
+</footer>
+
+<script>
+// ===================== FÍSICA =====================
+const MU_CAR  = 0.75; // coef. atrito asfalto seco, carro
+const MU_MOTO = 0.62; // coef. atrito asfalto seco, moto
+const G = 9.81;
+const T_REACT = 1.0; // s — tempo de reação médio
+
+function reactionDist(v_kmh) {
+  // d_r = (v/3.6) * t
+  return (v_kmh / 3.6) * T_REACT;
+}
+
+function brakeDist(v_kmh, mu) {
+  // d_f = v² / (2 * mu * g * 3.6²) → simplificando:
+  // usando v em m/s: d = v² / (2*mu*g)
+  const v = v_kmh / 3.6;
+  return (v * v) / (2 * mu * G);
+}
+
+function totalDist(v_kmh, mu) {
+  return reactionDist(v_kmh) + brakeDist(v_kmh, mu);
+}
+
+// ===================== ALERTAS =====================
+function getAlert(v, total, type) {
+  const icon = type === 'car' ? '🚗' : '🏍';
+  if (v <= 30) return { cls: 'alert-safe',   msg: `${icon} A ${v} km/h, você para em <strong>${total.toFixed(1)} m</strong>. Velocidade compatível com zonas escolares e residenciais. Ótimo!` };
+  if (v <= 50) return { cls: 'alert-safe',   msg: `${icon} A ${v} km/h (limite urbano), você precisa de <strong>${total.toFixed(1)} m</strong> para parar. Mantenha distância segura!` };
+  if (v <= 80) return { cls: 'alert-warn',   msg: `⚠️ A ${v} km/h, a distância de parada é <strong>${total.toFixed(1)} m</strong>. Em vias urbanas, isso equivale a quase ${Math.round(total/5)} carros enfileirados.` };
+  if (v <= 110) return { cls: 'alert-danger', msg: `🚨 A ${v} km/h, você precisa de <strong>${total.toFixed(1)} m</strong>! Se um obstáculo aparecer a menos dessa distância, a colisão é inevitável.` };
+  return { cls: 'alert-danger', msg: `🔴 VELOCIDADE CRÍTICA! A ${v} km/h, ${total.toFixed(1)} m para parar. Acima dos limites legais e extremamente perigoso.` };
+}
+
+// ===================== TABELA DE REFERÊNCIA =====================
+const REF_SPEEDS = [
+  { v: 20, zone: 'Áreas de pedestres, ciclovias', risk: 'low' },
+  { v: 30, zone: 'Ruas residenciais, ZTL', risk: 'low' },
+  { v: 40, zone: 'Vias locais (CTB Art. 61)', risk: 'low' },
+  { v: 50, zone: 'Vias urbanas coletoras', risk: 'low' },
+  { v: 60, zone: 'Marginais / arteriais urbanas', risk: 'medium' },
+  { v: 80, zone: 'Vias de trânsito rápido urbanas', risk: 'medium' },
+  { v: 100, zone: 'Rodovias estaduais', risk: 'high' },
+  { v: 110, zone: 'Rodovias federais (pista dupla)', risk: 'high' },
+  { v: 120, zone: 'Acima do limite legal', risk: 'high' },
+];
+
+function buildTable() {
+  const tbody = document.getElementById('ref-table-body');
+  tbody.innerHTML = '';
+  REF_SPEEDS.forEach(row => {
+    const dCar  = totalDist(row.v, MU_CAR).toFixed(1);
+    const dMoto = totalDist(row.v, MU_MOTO).toFixed(1);
+    const riskLabel = { low: 'Baixo', medium: 'Moderado', high: 'Alto' }[row.risk];
+    const riskClass = 'risk-' + row.risk;
+    tbody.innerHTML += `
+      <tr>
+        <td><span class="td-speed">${row.v}</span> <span style="color:var(--muted);font-size:0.72rem;">km/h</span></td>
+        <td class="td-zone">${row.zone}</td>
+        <td class="td-car">${dCar} m</td>
+        <td class="td-moto">${dMoto} m</td>
+        <td><span class="risk-badge ${riskClass}">${riskLabel}</span></td>
+      </tr>`;
+  });
+}
+
+// ===================== ESTRADA VISUAL =====================
+function updateRoad(id, v, mu, color, maxV) {
+  const dr   = reactionDist(v);
+  const df   = brakeDist(v, mu);
+  const dtot = dr + df;
+
+  // escala: a 160 km/h → ~100% da largura da barra
+  const maxDist = totalDist(maxV, Math.min(MU_CAR, MU_MOTO));
+  const sceneW  = document.getElementById('scene-' + id).offsetWidth - 50;
+
+  const reactPx = Math.min((dr / maxDist) * sceneW, sceneW - 10);
+  const brakePx = Math.min((df / maxDist) * sceneW, sceneW - reactPx - 10);
+  const vehicleX = 8;
+  const reactStart = vehicleX + 42;
+
+  document.getElementById('dz-' + id + '-react').style.left  = reactStart + 'px';
+  document.getElementById('dz-' + id + '-react').style.width = reactPx + 'px';
+  document.getElementById('dz-' + id + '-brake').style.left  = (reactStart + reactPx) + 'px';
+  document.getElementById('dz-' + id + '-brake').style.width = brakePx + 'px';
+
+  // velocidade da animação da pista proporcional
+  const dur = Math.max(0.2, 1.5 - (v / 160) * 1.3);
+  document.querySelectorAll(`#scene-${id} .road-line-seg`).forEach(el => {
+    el.style.animationDuration = dur + 's';
+  });
+}
+
+// ===================== BARRAS COMPARATIVAS =====================
+function updateBars(vCar, vMoto) {
+  const dCar  = totalDist(vCar,  MU_CAR);
+  const dMoto = totalDist(vMoto, MU_MOTO);
+  const drCar  = reactionDist(vCar);
+  const dfCar  = brakeDist(vCar, MU_CAR);
+  const drMoto = reactionDist(vMoto);
+  const dfMoto = brakeDist(vMoto, MU_MOTO);
+  const maxD = Math.max(dCar, dMoto, 10);
+
+  function setPct(id, pct) { document.getElementById(id).style.width = Math.min(pct, 100) + '%'; }
+
+  const reactPctCar  = (drCar  / maxD) * 100;
+  const brakePctCar  = (dfCar  / maxD) * 100;
+  const reactPctMoto = (drMoto / maxD) * 100;
+  const brakePctMoto = (dfMoto / maxD) * 100;
+
+  setPct('bar-car-react', reactPctCar);
+  document.getElementById('bar-car-brake').style.left  = reactPctCar + '%';
+  document.getElementById('bar-car-brake').style.width = brakePctCar + '%';
+
+  setPct('bar-moto-react', reactPctMoto);
+  document.getElementById('bar-moto-brake').style.left  = reactPctMoto + '%';
+  document.getElementById('bar-moto-brake').style.width = brakePctMoto + '%';
+
+  document.getElementById('bar-val-car').textContent  = dCar.toFixed(1)  + ' m';
+  document.getElementById('bar-val-moto').textContent = dMoto.toFixed(1) + ' m';
+}
+
+// ===================== UPDATE PRINCIPAL =====================
+function update() {
+  const vCar  = parseInt(document.getElementById('speed-car').value);
+  const vMoto = parseInt(document.getElementById('speed-moto').value);
+
+  document.getElementById('val-car').textContent  = vCar;
+  document.getElementById('val-moto').textContent = vMoto;
+
+  // Carro
+  const drCar = reactionDist(vCar);
+  const dfCar = brakeDist(vCar, MU_CAR);
+  const dtCar = drCar + dfCar;
+  document.getElementById('react-car').textContent = drCar.toFixed(1);
+  document.getElementById('brake-car').textContent = dfCar.toFixed(1);
+  document.getElementById('total-car').textContent = dtCar.toFixed(1);
+  const alertCar = getAlert(vCar, dtCar, 'car');
+  const ac = document.getElementById('alert-car');
+  ac.className = 'alert-box ' + alertCar.cls;
+  ac.innerHTML = alertCar.msg;
+
+  // Moto
+  const drMoto = reactionDist(vMoto);
+  const dfMoto = brakeDist(vMoto, MU_MOTO);
+  const dtMoto = drMoto + dfMoto;
+  document.getElementById('react-moto').textContent = drMoto.toFixed(1);
+  document.getElementById('brake-moto').textContent = dfMoto.toFixed(1);
+  document.getElementById('total-moto').textContent = dtMoto.toFixed(1);
+  const alertMoto = getAlert(vMoto, dtMoto, 'moto');
+  const am = document.getElementById('alert-moto');
+  am.className = 'alert-box ' + alertMoto.cls;
+  am.innerHTML = alertMoto.msg;
+
+  // Road visual
+  updateRoad('car',  vCar,  MU_CAR,  'car',  160);
+  updateRoad('moto', vMoto, MU_MOTO, 'moto', 160);
+
+  // Bars
+  updateBars(vCar, vMoto);
+}
+
+function setSpeed(type, v, btn) {
+  document.getElementById('speed-' + type).value = v;
+  // clear active em todos os botões do grupo
+  const parent = btn.closest('.speed-zones');
+  parent.querySelectorAll('.zone-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  update();
+}
+
+// ===================== INIT =====================
+buildTable();
+update();
+window.addEventListener('resize', update);
+</script>
+</body>
+</html>
